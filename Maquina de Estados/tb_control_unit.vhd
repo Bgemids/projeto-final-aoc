@@ -1,7 +1,8 @@
 --------------------------------------------------------------------------------
 -- tb_control_unit.vhd
 -- Testbench auto-verificavel da unidade de controle.
--- Aplica cada instrucao suportada e compara todas as saidas com o esperado.
+-- Aplica cada instrucao suportada (inclusive JR) e compara todas as saidas
+-- com o esperado.
 -- Tambem testa o decodificador da ALU sozinho para ALUOp = "11" (linha X1
 -- da tabela do enunciado), que o decodificador principal nunca gera.
 --------------------------------------------------------------------------------
@@ -23,11 +24,12 @@ architecture sim of tb_control_unit is
     signal MemtoReg   : std_logic;
     signal Jump       : std_logic;
     signal Jal        : std_logic;
+    signal JumpReg    : std_logic;
     signal ALUControl : std_logic_vector(2 downto 0);
 
     -- Todas as saidas concatenadas, para comparar de uma vez:
-    -- RegWrite & RegDst & ALUSrc & Branch & MemWrite & MemtoReg & Jump & Jal & ALUControl
-    signal ctrl : std_logic_vector(10 downto 0);
+    -- RegWrite & RegDst & ALUSrc & Branch & MemWrite & MemtoReg & Jump & Jal & JumpReg & ALUControl
+    signal ctrl : std_logic_vector(11 downto 0);
 
     -- Decodificador da ALU isolado (teste da linha X1)
     signal t_ALUOp      : std_logic_vector(1 downto 0) := "00";
@@ -49,6 +51,7 @@ begin
             MemtoReg   => MemtoReg,
             Jump       => Jump,
             Jal        => Jal,
+            JumpReg    => JumpReg,
             ALUControl => ALUControl
         );
 
@@ -59,7 +62,7 @@ begin
             ALUControl => t_ALUControl
         );
 
-    ctrl <= RegWrite & RegDst & ALUSrc & Branch & MemWrite & MemtoReg & Jump & Jal & ALUControl;
+    ctrl <= RegWrite & RegDst & ALUSrc & Branch & MemWrite & MemtoReg & Jump & Jal & JumpReg & ALUControl;
 
     stimulus : process
 
@@ -67,7 +70,7 @@ begin
             constant name     : in string;
             constant op_v     : in std_logic_vector(5 downto 0);
             constant funct_v  : in std_logic_vector(5 downto 0);
-            constant expected : in std_logic_vector(10 downto 0)
+            constant expected : in std_logic_vector(11 downto 0)
         ) is
         begin
             Op    <= op_v;
@@ -82,25 +85,27 @@ begin
         end procedure;
 
     begin
-        --                                        RW    RD    AS    Br    MW    M2R   J     Jal   ALUCtl
-        check("ADD",  "000000", "100000",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "010");
-        check("SUB",  "000000", "100010",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "110");
-        check("AND",  "000000", "100100",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "000");
-        check("OR",   "000000", "100101",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "001");
-        check("SLT",  "000000", "101010",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "111");
+        --                                        RW    RD    AS    Br    MW    M2R   J     Jal   JR    ALUCtl
+        check("ADD",  "000000", "100000",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "010");
+        check("SUB",  "000000", "100010",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "110");
+        check("AND",  "000000", "100100",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "000");
+        check("OR",   "000000", "100101",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "001");
+        check("SLT",  "000000", "101010",        "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "111");
         check("MULT (tabela: 011)", "000000", "101011",
-                                                 "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "011");
-        check("LW",   "100011", "000000",        "1" & "0" & "1" & "0" & "0" & "1" & "0" & "0" & "010");
-        check("SW",   "101011", "000000",        "0" & "0" & "1" & "0" & "1" & "0" & "0" & "0" & "010");
-        check("BEQ",  "000100", "000000",        "0" & "0" & "0" & "1" & "0" & "0" & "0" & "0" & "110");
-        check("ADDI", "001000", "000000",        "1" & "0" & "1" & "0" & "0" & "0" & "0" & "0" & "010");
-        check("J",    "000010", "000000",        "0" & "0" & "0" & "0" & "0" & "0" & "1" & "0" & "010");
-        check("JAL",  "000011", "000000",        "1" & "0" & "0" & "0" & "0" & "0" & "1" & "1" & "010");
+                                                 "1" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "011");
+        check("LW",   "100011", "000000",        "1" & "0" & "1" & "0" & "0" & "1" & "0" & "0" & "0" & "010");
+        check("SW",   "101011", "000000",        "0" & "0" & "1" & "0" & "1" & "0" & "0" & "0" & "0" & "010");
+        check("BEQ",  "000100", "000000",        "0" & "0" & "0" & "1" & "0" & "0" & "0" & "0" & "0" & "110");
+        check("ADDI", "001000", "000000",        "1" & "0" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "010");
+        check("J",    "000010", "000000",        "0" & "0" & "0" & "0" & "0" & "0" & "1" & "0" & "0" & "010");
+        check("JAL",  "000011", "000000",        "1" & "0" & "0" & "0" & "0" & "0" & "1" & "1" & "0" & "010");
+        -- JR: R-type com funct 001000; nao escreve registrador e desvia para rs
+        check("JR",   "000000", "001000",        "0" & "1" & "0" & "0" & "0" & "0" & "0" & "0" & "1" & "010");
         -- Opcode invalido: nada pode ser escrito e nenhum desvio pode ocorrer
-        check("INVALIDO", "111111", "000000",    "0" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "010");
+        check("INVALIDO", "111111", "000000",    "0" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "0" & "010");
         -- Funct com cara de "sub" nao pode afetar LW (ALUOp = 00 ignora o funct)
         check("LW (funct ignorado)", "100011", "100010",
-                                                 "1" & "0" & "1" & "0" & "0" & "1" & "0" & "0" & "010");
+                                                 "1" & "0" & "1" & "0" & "0" & "1" & "0" & "0" & "0" & "010");
 
         -- Linha X1 da tabela: ALUOp = "11" deve gerar subtracao, qualquer funct
         t_ALUOp <= "11";

@@ -12,7 +12,7 @@ architecture sim of tb_mips_teste is
     signal rst : std_logic := '1';
     signal PC, Instr, ALUResult, WriteData : std_logic_vector(31 downto 0);
     signal MemWrite : std_logic;
-    type wr_t is array (0 to 2) of std_logic_vector(31 downto 0);
+    type wr_t is array (0 to 3) of std_logic_vector(31 downto 0);
     signal mem_seen : wr_t := (others => (others => 'U'));
     signal ciclos : natural := 0;
 begin
@@ -34,7 +34,8 @@ begin
         assert mem_seen(0) = x"0000000F" report "FALHA: soma do laco (esperado 15)" severity error;
         assert mem_seen(1) = x"00000007" report "FALHA: addi dentro da funcao (esperado 7)" severity error;
         assert mem_seen(2) = x"00000024" report "FALHA: $ra do JAL (esperado 0x24)" severity error;
-        assert PC = x"00000038" report "FALHA: PC final (esperado 0x38)" severity error;
+        assert mem_seen(3) = x"00000007" report "FALHA: retorno do JR (esperado mem[12] = 7)" severity error;
+        assert PC = x"0000002C" report "FALHA: PC final (esperado 0x2C)" severity error;
         report "FIM: PC final = " & integer'image(to_integer(unsigned(PC)));
         wait;
     end process;

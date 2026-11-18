@@ -1,6 +1,7 @@
 # Projeto Final - AOC (UFMG)
 
-Processador MIPS de 32 bits single-cycle em VHDL, com suporte a Branch (BEQ), JAL, LW e SW.
+Processador MIPS de 32 bits single-cycle em VHDL, com suporte a Branch (BEQ), JAL, LW e SW
+(e JR, para voltar das funcoes chamadas com JAL).
 
 O trabalho foi dividido em duas partes:
 
@@ -25,7 +26,7 @@ Maquina de Estados/         unidade de controle
 Integracao (teste)/         processador de teste com PC e memoria de instrucoes PROVISORIOS
   mips_teste.vhd            liga todos os blocos acima, como na figura do enunciado
   tb_mips_teste.vhd         roda o programa e confere as escritas na memoria e o PC final
-  programa_teste.asm        programa de teste (laco, beq, j, sw, lw, jal, slt)
+  programa_teste.asm        programa de teste (laco, beq, j, sw, lw, jal, jr, slt)
 Documentacao/               relatorios em PDF de cada parte
 ```
 
@@ -59,15 +60,19 @@ Operacoes da ALU (tabela do enunciado):
 
 Sinais gerados para cada instrucao:
 
-| Instrucao | Op | RegWrite | RegDst | ALUSrc | Branch | MemWrite | MemtoReg | Jump | Jal | ALUOp |
-|---|---|---|---|---|---|---|---|---|---|---|
-| R-type | 000000 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
-| LW | 100011 | 1 | 0 | 1 | 0 | 0 | 1 | 0 | 0 | 00 |
-| SW | 101011 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 00 |
-| BEQ | 000100 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 01 |
-| ADDI | 001000 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 00 |
-| J | 000010 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 00 |
-| JAL | 000011 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 00 |
+| Instrucao | Op | RegWrite | RegDst | ALUSrc | Branch | MemWrite | MemtoReg | Jump | Jal | JumpReg | ALUOp |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| R-type | 000000 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 |
+| LW | 100011 | 1 | 0 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 00 |
+| SW | 101011 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 00 |
+| BEQ | 000100 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 01 |
+| ADDI | 001000 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 00 |
+| J | 000010 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 00 |
+| JAL | 000011 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 00 |
+| JR (funct 001000) | 000000 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 10 |
+
+O JR e uma instrucao R-type, entao o decodificador principal (que so ve o opcode) nao o distingue.
+A deteccao fica no `control_unit.vhd`, que ve opcode e `funct`: gera `JumpReg` e anula o `RegWrite`.
 
 O decodificador da ALU segue a tabela do enunciado: `ALUOp = 00` soma, `X1` subtrai,
 `1X` olha o `funct` (add, sub, and, or, slt e `101011` -> `011`).
@@ -77,14 +82,15 @@ O decodificador da ALU segue a tabela do enunciado: `ALUOp = 00` soma, `X1` subt
 O caminho de dados segue a figura do enunciado. `RegDst`, `ALUSrc` e `MemtoReg` tem 1 bit e
 controlam instancias do `mux2`. O banco de registradores recebe `RegWrite` na porta `we3`.
 
-A figura do enunciado nao tem J nem JAL, que o enunciado exige. Para suporta-los, a controladora
-gera dois sinais extras, e o caminho de dados usa tres `mux2` a mais:
+A figura do enunciado nao tem J, JAL nem JR. Para suporta-los, a controladora gera tres sinais
+extras, e o caminho de dados usa quatro `mux2` a mais:
 
 | Sinal | mux2 | Entrada 0 | Entrada 1 |
 |---|---|---|---|
 | `Jump` | proximo PC | saida do mux do `PCSrc` | `PCJump = PCPlus4(31..28) & Instr(25..0) & "00"` |
 | `Jal` | registrador de destino (`N => 5`) | saida do mux do `RegDst` | `"11111"` ($ra) |
 | `Jal` | dado escrito no registrador | saida do mux do `MemtoReg` | `PCPlus4` |
+| `JumpReg` | proximo PC (`PCNext`) | saida do mux do `Jump` | `RD1` (registrador rs) |
 
 O arquivo `Integracao (teste)/mips_teste.vhd` mostra essa ligacao completa.
 

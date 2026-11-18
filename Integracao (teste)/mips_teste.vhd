@@ -27,19 +27,21 @@ architecture rtl of mips_teste is
          5 => x"08000002",  -- 14: j loop
          6 => x"AC090000",  -- 18: done: sw $t1,0($0)
          7 => x"8C0A0000",  -- 1C: lw $t2,0($0)
-         8 => x"0C00000A",  -- 20: jal func
-         9 => x"08000009",  -- 24: j fim (nao deve executar)
-        10 => x"200B0007",  -- 28: func: addi $t3,$0,7
-        11 => x"AC0B0004",  -- 2C: sw $t3,4($0)
-        12 => x"AC1F0008",  -- 30: sw $ra,8($0)
-        13 => x"012A582A",  -- 34: slt $t3,$t1,$t2
-        14 => x"0800000E",  -- 38: fim: j fim
+         8 => x"0C00000C",  -- 20: jal func
+         9 => x"AC0B000C",  -- 24: sw $t3,12($0)
+        10 => x"012A582A",  -- 28: slt $t3,$t1,$t2
+        11 => x"0800000B",  -- 2C: fim: j fim
+        12 => x"200B0007",  -- 30: func: addi $t3,$0,7
+        13 => x"AC0B0004",  -- 34: sw $t3,4($0)
+        14 => x"AC1F0008",  -- 38: sw $ra,8($0)
+        15 => x"03E00008",  -- 3C: jr $ra
         others => x"00000000");
     signal PC, PCNext, PCPlus4, PCBranch, PCJump, PCBrMux, Instr : std_logic_vector(31 downto 0);
     signal SignImm, SignImmSh, SrcA, SrcB, WriteData, ALUResult, ReadData : std_logic_vector(31 downto 0);
     signal ResultMem, Result : std_logic_vector(31 downto 0);
     signal WriteReg0, WriteReg : std_logic_vector(4 downto 0);
-    signal RegWrite, RegDst, ALUSrc, Branch, MemWrite, MemtoReg, Jump, Jal, Zero, PCSrc : std_logic;
+    signal RegWrite, RegDst, ALUSrc, Branch, MemWrite, MemtoReg, Jump, Jal, JumpReg, Zero, PCSrc : std_logic;
+    signal PCJmpMux : std_logic_vector(31 downto 0);
     signal ALUControl : std_logic_vector(2 downto 0);
 begin
     -- PC provisorio: registrador com reset sincrono ativo em alto
@@ -55,7 +57,7 @@ begin
     cu: entity work.control_unit port map (
         Op => Instr(31 downto 26), Funct => Instr(5 downto 0),
         RegWrite => RegWrite, RegDst => RegDst, ALUSrc => ALUSrc, Branch => Branch,
-        MemWrite => MemWrite, MemtoReg => MemtoReg, Jump => Jump, Jal => Jal,
+        MemWrite => MemWrite, MemtoReg => MemtoReg, Jump => Jump, Jal => Jal, JumpReg => JumpReg,
         ALUControl => ALUControl);
 
     rf: entity work.RegisterFile port map (
@@ -92,7 +94,10 @@ begin
     mux_pcsrc: entity work.mux2 generic map (N => 32) port map (
         A => PCPlus4, B => PCBranch, Sel => PCSrc, Y => PCBrMux);
     mux_jump: entity work.mux2 generic map (N => 32) port map (
-        A => PCBrMux, B => PCJump, Sel => Jump, Y => PCNext);
+        A => PCBrMux, B => PCJump, Sel => Jump, Y => PCJmpMux);
+    -- JR: o proximo PC vem do registrador rs (RD1 = SrcA)
+    mux_jr: entity work.mux2 generic map (N => 32) port map (
+        A => PCJmpMux, B => SrcA, Sel => JumpReg, Y => PCNext);
 
     PC_out <= PC; Instr_out <= Instr; ALUResult_out <= ALUResult;
     WriteData_out <= WriteData; MemWrite_out <= MemWrite;
