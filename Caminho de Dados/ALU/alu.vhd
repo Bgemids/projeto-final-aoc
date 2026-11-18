@@ -21,6 +21,9 @@ begin
             when "000" => s_result <= SrcA and SrcB;
             when "001" => s_result <= SrcA or SrcB;
             when "010" => s_result <= std_logic_vector(signed(SrcA) + signed(SrcB));
+            -- 100 e 101: operacoes da tabela do enunciado (acrescentadas na integracao)
+            when "100" => s_result <= SrcA and (not SrcB);
+            when "101" => s_result <= SrcA or (not SrcB);
             when "110" => s_result <= std_logic_vector(signed(SrcA) - signed(SrcB));
             when "111" => 
                 if signed(SrcA) < signed(SrcB) then

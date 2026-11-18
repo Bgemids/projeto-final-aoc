@@ -80,6 +80,20 @@ begin
         ALUControl <= "111"; -- Como 10 não é menor que 5, ALUResult deve ser 0
         wait for 10 ns;
 
+        -- Teste 8: A and (not B) (ALUControl 100) - acrescentado na integracao
+        SrcA <= x"000000FF";
+        SrcB <= x"0000000F";
+        ALUControl <= "100"; -- ALUResult deve ser 000000F0
+        wait for 10 ns;
+        assert ALUResult = x"000000F0" report "ERRO: A and (not B)" severity error;
+
+        -- Teste 9: A or (not B) (ALUControl 101) - acrescentado na integracao
+        SrcA <= x"00000000";
+        SrcB <= x"FFFFFF00";
+        ALUControl <= "101"; -- ALUResult deve ser 000000FF
+        wait for 10 ns;
+        assert ALUResult = x"000000FF" report "ERRO: A or (not B)" severity error;
+
         wait; -- Interrompe a simulação
     end process;
 
