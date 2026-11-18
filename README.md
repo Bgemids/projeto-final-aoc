@@ -27,7 +27,8 @@ Integracao (teste)/         processador de teste com PC e memoria de instrucoes 
   mips_teste.vhd            liga todos os blocos acima, como na figura do enunciado
   tb_mips_teste.vhd         roda o programa e confere as escritas na memoria e o PC final
   programa_teste.asm        programa de teste (laco, beq, j, sw, lw, jal, jr, slt)
-Documentacao/               relatorios em PDF de cada parte
+Documentacao/               relatorios em PDF de cada parte e a documentacao do grupo
+                            (PDF e .docx editavel)
 ```
 
 Ainda faltam no repositório: Memoria de Instrucoes e PC definitivos (parte do Bruno).
